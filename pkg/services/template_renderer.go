@@ -194,7 +194,8 @@ func (t *TemplateRenderer) parse(build *templateBuild) (*TemplateParsed, error) 
 	// Check if the template has not yet been parsed; or if the environment is development.
 	// If the environment is local we want the templates to reflect changes without having
 	// the server restart.
-	if tp, err = t.Load(build.group, build.key); err != nil || t.config.App.Environment == config.EnvDev {
+	devEnv := t.config.App.Environment == config.EnvDev || t.config.App.Environment == config.EnvLocal
+	if tp, err = t.Load(build.group, build.key); err != nil || devEnv {
 		// Initialize the parsed template with the function map
 		parsed := template.New(build.base + config.TemplateExt).
 			Funcs(t.funcMap).

@@ -2,9 +2,12 @@ package services
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
+	"golang.org/x/time/rate"
 
 	"github.com/tiny-blob/tinyblob/config"
 )
@@ -17,6 +20,8 @@ type Container struct {
 	Config *config.Config
 	// Web stores the web framework
 	Web *echo.Echo
+	// SolRPC stores the solana RPC client
+	SolRPC *rpc.Client
 	// TemplateRenderer stores the template renderer
 	TemplateRenderer *TemplateRenderer
 	// Validator stores the validator
@@ -31,6 +36,7 @@ func NewContainer() *Container {
 	c.initWeb()
 	c.initCache()
 	c.initTemplateRenderer()
+	c.initSolRPC()
 
 	return c
 }
@@ -84,4 +90,28 @@ func (c *Container) initCache() {
 // initTemplateRenderer initializes the template renderer
 func (c *Container) initTemplateRenderer() {
 	c.TemplateRenderer = NewTemplateRenderer(c.Config)
+}
+
+// initSolRPC initializes the solana RPC client
+func (c *Container) initSolRPC() {
+	var cluster rpc.Cluster
+
+	switch c.Config.App.Environment {
+	case config.EnvProd:
+		cluster = rpc.MainNetBeta
+	case config.EnvDev:
+		cluster = rpc.DevNet
+	case config.EnvLocal:
+		cluster = rpc.LocalNet
+	default:
+		cluster = rpc.TestNet
+	}
+
+	rpcClient := rpc.NewWithCustomRPCClient(rpc.NewWithLimiter(
+		cluster.RPC,
+		rate.Every(time.Second),
+		5,
+	))
+
+	c.SolRPC = rpcClient
 }
